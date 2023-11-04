@@ -2,13 +2,14 @@ import { NextFunction,Request,Response } from "express";
 import { catchAsyncError } from "../middleware/catchAsyncError";
 import ErrorHandler from "../utils/ErrorHandler";
 import cloudinary from "cloudinary";
-import { createCourse } from "../services/couse.service";
+import { createCourse, getAllCoursesService } from "../services/couse.service";
 import CourseModel from "../models/courseModel";
 import { redis } from "../utils/redis";
 import mongoose from "mongoose";
 import path from "path";
 import ejs from "ejs";
 import userMail from "../utils/sendMail";
+import NotificationModel from "../models/notificationModel";
 
 // upload course
 
@@ -165,6 +166,14 @@ export const addQuestion=catchAsyncError(async(req:Request,res:Response,next:Nex
      }
      courseContent.questions.push(newQuestion);
 
+     await NotificationModel.create({
+        userId:req.user?._id,
+        title:"New Question Recive",
+        message: `You Have a new Question from ${courseContent?.title}`
+    });
+
+
+     redis.set(courseId,JSON.stringify(course));
      await course?.save();
      res.status(200).json({
         success: true,
@@ -202,11 +211,16 @@ export const addAnswer=catchAsyncError(async(req:Request,res:Response,next:NextF
          answer:answer,
       }
       question?.questionReplies?.push(newAnswer);
-
+      redis.set(courseId,JSON.stringify(course));
       await course?.save();
+
      
     if(req.user?._id===question.user._id){
-
+        await NotificationModel.create({
+            userId:req.user?._id,
+            title:"New Question Reply Recived",
+            message: `You Have a new Question from ${courseContent?.title}`
+        });
           
     }else{
         const data={
@@ -280,6 +294,7 @@ export const addReview=catchAsyncError(async(req:Request,res:Response,next:NextF
       if(course){
         course.ratings=avg/course.reviews.length;
       }
+      redis.set(courseId,JSON.stringify(course));
       await course.save();
 
       const notification={
@@ -319,9 +334,15 @@ export const addReplyToReview=catchAsyncError(async(req:Request,res:Response,nex
            user:req.user,
            comment:comment,
         }
+        if(!review.commentReplies){
+            review.commentReplies=[];
+        }
         review?.commentReplies?.push(newReply);
 
         await course?.save();
+        redis.set(courseId,JSON.stringify(course));
+
+
         
         res.status(200).json({
            success: true,
@@ -331,4 +352,33 @@ export const addReplyToReview=catchAsyncError(async(req:Request,res:Response,nex
      } catch (err:any) {
         next(new ErrorHandler(err.message,500));
      } 
+});
+
+export const getAllCourses=catchAsyncError(async(req:Request,res:Response,next:NextFunction)=>{
+    try {
+        getAllCoursesService(res);
+    } catch (err:any) {
+     next(new ErrorHandler(err.message,400));
+    }
+})
+
+
+// delete course
+
+export const deleteCourse=catchAsyncError(async(req:Request,res:Response,next:NextFunction)=>{
+    try {
+        const {courseId}=req.body;
+        const course=await CourseModel.findById(courseId);
+        if(!course){
+           return next(new ErrorHandler("invalid courseId",400));
+        }
+        redis.del(courseId);
+        await course?.deleteOne({_id:courseId});
+        res.status(200).json({
+           success: true,
+           message: "Course Deleted Successfully",
+        });
+    }catch(err:any){
+        next(new ErrorHandler(err.message,500));
+    }
 });

@@ -5,6 +5,10 @@ import cookieParser from "cookie-parser";
 import errorMiddleware from "./middleware/errors";
 import {userRouter} from "./routes/userrouter";
 import courseRoute from "./routes/course.route";
+import orderRoute from "./routes/orders.route";
+import notificationRoute from "./routes/notification.route";
+
+
 
 export const app=express();
 
@@ -20,6 +24,12 @@ app.use(express.json({'limit':"50mb"}));
 app.use(express.urlencoded({limit:50,extended:true}));    
 app.use("/api/v1",userRouter);
 app.use("/api/v1",courseRoute);
+app.use("/api/v1",orderRoute);
+app.use("/api/v1",notificationRoute);
+
+
+
+
 
 
 app.get("/test",(req:Request,res:Response,next:NextFunction)=>{

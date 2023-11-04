@@ -6,7 +6,7 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 import userMail from "../utils/sendMail";
 import { accessTokenOptions, refreshTokenOptions, sendToken } from "../utils/jwt";
 import { redis } from "../utils/redis";
-import { getUserById } from "../services/user.service";
+import { getAllUsersService, getUserById, updateUserRoleService } from "../services/user.service";
 import cloudinary from 'cloudinary';
 require('dotenv').config();
 
@@ -346,4 +346,46 @@ const updateCloudinaryPic=catchAsyncError(async(req:Request,res:Response,next:Ne
     next(new ErrorHandler(err.message,400));
   }
 })
-export {registerUser,activationUser,loginUser,logoutUser,updateCloudinaryPic,updateUserPassword,updateAccessToken,updateUserInfo,getSerInfo,spocialAuth};
+
+export const getAllUsers=catchAsyncError(async(req:Request,res:Response,next:NextFunction)=>{
+     try {
+         getAllUsersService(res);
+     } catch (err:any) {
+      next(new ErrorHandler(err.message,400));
+     }
+})
+
+ const updateUserRole=catchAsyncError(async(req:Request,res:Response,next:NextFunction)=>{
+     try {
+        const {id,role}=req.body;
+        updateUserRoleService(id,role,res);
+     } catch (err:any) {
+        next(new ErrorHandler(err.message,500));
+     }
+})
+
+// delete user
+
+const deleteUser=catchAsyncError(async(req:Request,res:Response,next:NextFunction)=>{
+    try {
+      const {id}=req.body;
+        const user=await User.findById({_id:id});
+        if(user){
+          await user.deleteOne({_id:id});
+          await redis.del(id);
+          res.status(201).json({
+            success: true,
+            message:"User Deleted Successfully",
+            user
+          });
+        }else{
+          res.status(404).json({
+            success: false,
+            message:"User Not Found"
+          });
+        }
+    } catch (err:any) {
+        next(new ErrorHandler(err.message,400));
+    }
+})
+export {registerUser,activationUser,deleteUser,updateUserRole,loginUser,logoutUser,updateCloudinaryPic,updateUserPassword,updateAccessToken,updateUserInfo,getSerInfo,spocialAuth};
