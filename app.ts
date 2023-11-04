@@ -7,6 +7,7 @@ import {userRouter} from "./routes/userrouter";
 import courseRoute from "./routes/course.route";
 import orderRoute from "./routes/orders.route";
 import notificationRoute from "./routes/notification.route";
+import anlayticsRoute from "./routes/analytics.route";
 
 
 
@@ -26,6 +27,9 @@ app.use("/api/v1",userRouter);
 app.use("/api/v1",courseRoute);
 app.use("/api/v1",orderRoute);
 app.use("/api/v1",notificationRoute);
+app.use("/api/v1",anlayticsRoute);
+
+
 
 
 
